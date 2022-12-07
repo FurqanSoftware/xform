@@ -1,0 +1,79 @@
+steps:
+  - type: parse
+    args:
+      fields:
+        - key: name
+          as: Name
+          type: string
+          required: yes
+        - key: email
+          as: Email
+          type: email
+          required: yes
+        - key: subject
+          as: Subject
+          type: string
+        - key: message
+          as: Message
+          type: string
+          required: yes
+
+  - type: honeypot
+    args:
+      field: Subject
+      penalty: suppress
+      duration: 1h
+
+  - type: unspam
+    id: unspam
+    args:
+      field: Message
+      shortURLs: 0
+    failOkay: true
+
+  - type: captcha
+    when: '$unspam.triggered == true'
+
+  - type: dump
+    args:
+      template: '{{.Name}} sent a message via the contact form on furqansoftware.com'
+
+  - type: log
+    args:
+      text: |
+        {{.Name}} sent a message via the contact form on furqansoftware.com
+
+        Name: {{.Name}}
+        Email: {{.Email}}
+        Message: {{.Message}}
+
+  - type: mattermost
+    args:
+      webhook: 'https://mattermost.furqansoftware.net/hooks/mehshbd4cibx5jbzbspme63oua'
+      text: |
+        {{.Name}} sent a message via the contact form on furqansoftware.com
+
+        Name: {{.Name}}
+        Email: {{.Email}}
+        Message: {{.Message}}
+
+  - type: email
+    args:
+      driver: smtp
+      host: smtp.mailgun.org
+      port: 587
+      username: xform@mg.furqansoftware.com
+      password: $SMTP_PASSWORD
+      from: mailer@xform.furqansoftware.com
+      to: hello@furqansoftware.com
+      subject: '{{.Name}} sent a message via the contact form on furqansoftware.com'
+      bodyText: |
+        {{.Name}} sent a message via the contact form on furqansoftware.com
+
+        Name: {{.Name}}
+        Email: {{.Email}}
+        Message: {{.Message}}
+
+  - type: redirect
+    args:
+      url: https://example.com
